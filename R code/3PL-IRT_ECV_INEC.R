@@ -24,13 +24,35 @@ library(gridExtra)
 library(CTT)
 library(magrittr)
 library(data.table)
+library(survey)
 
 data <- fread("Data/RHS2021_HH_WEALTH.dat") 
 
 
 dat_1 <- data %>%
   dplyr::select(matches("hh_10"))
-
+names(dat_1) <-
+c(
+"[A] ELECTRIC STOVE",
+"[B] GAS STOVE",
+"[C] REFRIGERATOR",
+"[D] FREEZER (DEEP FREEZE)",
+"[E] MICROWAVE",
+"[F] RADIO",
+"[G] AIR CONDITIONER",
+"[H] ELECTRONIC GAMING EQUIPMENT",
+"[I] WASHING MACHINE",
+"[J] CLOTHES DRYER",
+"[K] ELECTRIC WATER HEATER",
+"[L] SOLAR WATER HEATER",
+"[M] COMPUTER (INCLUDING LAPTOP & TABLET)",
+"[N] TELEVISION",
+"[O] CABLE SERVICE",
+"[P] GENERATOR",
+"[Q] DISHWASHER",
+"[R] INTERNET WITHIN THE HOUSEHOLD",
+"[S] A WORKING MOTORCYCLE/MOTORBIKE",
+"[T] A WORKING MOTOR VEHICLE (CAR, VAN OR TR")
 ######################
 ### Teoría clásica ###
 ######################
@@ -89,26 +111,11 @@ hist(dificultad.est)
 score <- 5 + 2 * bienestar.est
 hist(score)
 
-plotICC(res_rm_1, item.subset = 2, col = 4, 
-        main = ("ICC para GAS STOVE"))
-abline(h = 0.5, col = 2, lty = 2)
-abline(v = 0, col = 3, lty = 2)
-
-plotICC(res_rm_1, item.subset = 3, col = 4,
-        main = ("ICC para REFRIGERATO"))
-abline(h = 0.5, col = 2, lty = 2)
-abline(v = 0, col = 3, lty = 2)
-
-plotICC(res_rm_1, item.subset = 13, col = 4,
-        main = ("ICC par COMPUTER (INCLUDING LAPTOP & TABLET)"))
-abline(h = 0.5, col = 2, lty = 2)
-abline(v = 0, col = 3, lty = 2)
-
-plotICC(res_rm_1, item.subset = 14, col = 4,
-        main = ("ICC para TELEVISIÓN"))
-abline(h = 0.5, col = 2, lty = 2)
-abline(v = 0, col = 3, lty = 2)
-
+for (i in 1:ncol(dat_1)) {
+  plotICC(res_rm_1, item.subset = i, legend = TRUE)
+  abline(h = 0.5, lty = 3, col = 2)
+  abline(v = 0, lty = 2, col = 3)
+}
 
 plotjointICC(res_rm_1, cex = .4)
 plotPImap(res_rm_1, cex.gen = .55, sorted = TRUE)
@@ -160,8 +167,7 @@ for (i in 1:ncol(dat_1)) {
 
 arrange(anaitem, Dscrmn, info)
 
-dat_1 %<>% dplyr::select(-hh_10__6,
-                 -hh_10__4)
+dat_1 %<>% dplyr::select(-c(6,4))
 
 res_3pl_1 <- tpm(dat_1)
 res_3pl_1
@@ -217,15 +223,28 @@ sd(score)
 hist(score, breaks = 10)
 summary(score)
 
-Tercil <- cut(score, breaks = c(quantile(score, probs = seq(0, 1, by = 0.333))), 
-    labels=c("1T","2T","3T"), include.lowest=TRUE)
-boxplot(score ~ Tercil)
+##########################################
+## Diseño muestral
+diseno <- dat_1 %>% 
+  mutate(feh = data$hh_weight,
+         score = score) %>% 
+  svydesign(ids = ~1, weights = ~feh, data = .)
 
-Cluster <- kmeans(score, 3)$cluster
-boxplot(score ~ Cluster)
+Quantile <- svyquantile(design = diseno,
+            x = ~score, 
+            quantiles =   seq(0, 1, by = 0.2))$score
+#########################################
 
-summary(Cluster)
-table(Cluster)
+Quantil <- cut(score, breaks = Quantile[,1], 
+    labels=paste0("Q",1:5), include.lowest=TRUE)
+boxplot(score ~ Quantil)
+
+# Cluster <- kmeans(score, 5)$cluster
+# 
+# boxplot(score ~ Cluster)
+# 
+# summary(Cluster)
+# table(Cluster)
 
 #######################
 # Escogencia de ítems #
