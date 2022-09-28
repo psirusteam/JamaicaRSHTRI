@@ -5,7 +5,6 @@
 ### equipamiento para la estratificación  ###
 ### del marco de muestreo                 ###
 ###                                       ###
-### ECV - INEC                            ###
 ### ECLAC's Official Mission              ### 
 ### Author: Andrés Gutiérrez              ###
 ### Date: 2019                            ###
@@ -13,6 +12,8 @@
 
 rm(list = ls())
 options(psipen = -100, digits = 3)
+
+# Leerr librerías ---------------------------------------------------------
 
 library(WrightMap)
 library(eRm)
@@ -25,12 +26,23 @@ library(CTT)
 library(magrittr)
 library(data.table)
 library(survey)
+library(FactoMineR)
+library(factoextra)
+library(homals)
+library(corrplot)
+
+# Leer base de datos. -----------------------------------------------------
 
 data <- fread("Data/RHS2021_HH_WEALTH.dat") 
 
 
+# Seleccionar columnas de interés  ----------------------------------------
+
 dat_1 <- data %>%
   dplyr::select(matches("hh_10"))
+
+# Renombrar columnas  -----------------------------------------------------
+
 names(dat_1) <-
 c(
 "[A] ELECTRIC STOVE",
@@ -53,11 +65,56 @@ c(
 "[R] INTERNET WITHIN THE HOUSEHOLD",
 "[S] A WORKING MOTORCYCLE/MOTORBIKE",
 "[T] A WORKING MOTOR VEHICLE (CAR, VAN OR TR")
+
+###########################################
+### Análisis de componentes principales ###
+###########################################
+M <- cor(dat_1)
+dimnames(M)[[1]] <- substr(names(dat_1),1,3)
+dimnames(M)[[2]] <- substr(names(dat_1),1,3)
+corrplot(M, order = 'FPC', addCoef.col = 'black',
+         tl.pos = 'd',
+         cl.pos = 'n', col = COL2('PiYG'))
+
+acp_1 <- PCA(dat_1, ncp = 2, graph = FALSE)
+
+acp_1$var$contrib %>% data.frame() %>% arrange(desc( Dim.1))
+
+fviz_pca_var(acp_1, col.var = "contrib",
+             gradient.cols = c("white", "black"),
+             ggtheme = theme_minimal())
+fviz_pca_biplot(acp_1)
+
+# seleccionando la primera componente.
+dim1 <- as.numeric(scale(acp_1$ind$coord[,1]))
+# escala de mu = 5 y sigmas = 2
+score_acp1 <- 5 + 2*(dim1)
+hist(score_acp1)
+boxplot(score_acp1)
+
+##################################################
+### Análisis de componentes principales homals ###
+##################################################
+data_homal <- homals(dat_1, ndim = 2, level = "nominal")
+acp_2 <- PCA(-data_homal$scoremat[,,1], ncp = 2, graph = FALSE)
+
+acp_2$var$contrib %>% data.frame() %>% arrange(desc( Dim.1))
+
+fviz_pca_var(acp_2, col.var = "contrib",
+             gradient.cols = c("white", "black"),
+             ggtheme = theme_minimal())
+fviz_pca_biplot(acp_2)
+
+# seleccionando la primera componente.
+dim1 <- as.numeric(scale(acp_2$ind$coord[,1]))
+# escala de mu = 5 y sigmas = 2
+score_acp2 <- 5 + 2*(dim1)
+hist(score_acp2)
+boxplot(score_acp2)
+
 ######################
 ### Teoría clásica ###
 ######################
-
-names(dat_1)
 
 #Reliability
 cronbach.alpha(dat_1)  
@@ -108,8 +165,8 @@ hist(bienestar.est)
 dificultad.est <- scale(beta.est)
 hist(dificultad.est)
 
-score <- 5 + 2 * bienestar.est
-hist(score)
+score_RM <- 5 + 2 * bienestar.est
+hist(score_RM)
 
 for (i in 1:ncol(dat_1)) {
   plotICC(res_rm_1, item.subset = i, legend = TRUE)
@@ -133,7 +190,7 @@ res_3pl_1
 plot(res_3pl_1)
 
 ## Item Characteristic Curves
-nrow(dat_1)
+
 for (i in 1:ncol(dat_1)) {
   plot(res_3pl_1, items = i, legend = TRUE)
   abline(h = 0.5, lty = 3, col = 2)
@@ -151,7 +208,7 @@ plot(res_3pl_1, type = "IIC", items = 0, legend = T)
 plot(res_3pl_1, type = "IIC", legend = T)
 
 ##########################
-# Genración de la escala #
+# Generación de la escala #
 ##########################
 
 anaitem <- as.data.frame(coef(res_3pl_1))
@@ -166,12 +223,6 @@ for (i in 1:ncol(dat_1)) {
 }
 
 arrange(anaitem, Dscrmn, info)
-
-dat_1 %<>% dplyr::select(-c(6,4))
-
-res_3pl_1 <- tpm(dat_1)
-res_3pl_1
-plot(res_3pl_1)
 
 ## Standardizing the scores and creating the index
 pres <- factor.scores(res_3pl_1, dat_1)
@@ -194,22 +245,6 @@ plot(a.est)
 
 wrightMap(theta.est, sort(beta.est), label.items.row = 3)
 
-## Test Information Function
-plot(res_3pl_1, type = "IIC", items = 0, legend = T)
-plot(res_3pl_1, type = "IIC", legend = T)
-
-## Análisis de ítems
-anaitem <- as.data.frame(coef(res_3pl_1))
-rownames(anaitem)
-anaitem[order(anaitem$Dscrmn),  ]
-## Information at 3.5SD
-anaitem$info <- NULL
-anaitem$names <- NULL
-for (i in 1:ncol(dat_1)) {
-  anaitem$names[i] <- rownames(anaitem)[i] 
-  anaitem$info[i] <- round(100 * unlist(information(res_3pl_1, c(-3.5,3.5), items = i))$PropRange)
-}
-
 # Equating
 
 bienestar.est <- scale(theta.est)
@@ -217,34 +252,70 @@ hist(bienestar.est)
 dificultad.est <- scale(beta.est)
 hist(dificultad.est)
 
-score <- 5 + 2 * bienestar.est
-mean(score)
-sd(score)
-hist(score, breaks = 10)
-summary(score)
+score_TRI <- 5 + 2 * bienestar.est
+mean(score_TRI)
+sd(score_TRI)
+hist(score_TRI, breaks = 10)
+summary(score_TRI)
 
 ##########################################
 ## Diseño muestral
 diseno <- dat_1 %>% 
   mutate(feh = data$hh_weight,
-         score = score) %>% 
+         score_acp = score_acp1,
+         score_homals = score_acp2,
+         score_RM = score_RM,
+         score_TRI = score_TRI) %>% 
   svydesign(ids = ~1, weights = ~feh, data = .)
 
-Quantile <- svyquantile(design = diseno,
-            x = ~score, 
-            quantiles =   seq(0, 1, by = 0.2))$score
+Quantile_acp1 <- svyquantile(
+  design = diseno,
+  x = ~ score_acp,
+  quantiles =   seq(0, 1, by = 0.2)
+)$score
+
+Quantile_acp2 <- svyquantile(
+  design = diseno,
+  x = ~ score_homals,
+  quantiles =   seq(0, 1, by = 0.2)
+)$score
+
+
+Quantile_RM <- svyquantile(
+  design = diseno,
+  x = ~ score_RM,
+  quantiles =   seq(0, 1, by = 0.2)
+)$score
+
+Quantile_TRI <- svyquantile(
+  design = diseno,
+  x = ~ score_TRI,
+  quantiles =   seq(0, 1, by = 0.2)
+)$score
 #########################################
 
-Quantil <- cut(score, breaks = Quantile[,1], 
+Quantil_acp1 <- cut(score_acp1, breaks = Quantile_acp1[,1], 
     labels=paste0("Q",1:5), include.lowest=TRUE)
-boxplot(score ~ Quantil)
 
-# Cluster <- kmeans(score, 5)$cluster
-# 
-# boxplot(score ~ Cluster)
-# 
-# summary(Cluster)
-# table(Cluster)
+Quantil_acp2 <- cut(score_acp2, breaks = Quantile_acp2[,1], 
+                   labels=paste0("Q",1:5), include.lowest=TRUE)
+
+Quantil_RM <- cut(score_RM, breaks = Quantile_RM[,1], 
+                   labels=paste0("Q",1:5), include.lowest=TRUE)
+
+Quantil_TRI <- cut(score_TRI, breaks = Quantile_TRI[,1], 
+                   labels=paste0("Q",1:5), include.lowest=TRUE)
+
+score <- data.frame(metodo = gl(k = length(Quantil_acp1),n = 4,
+                                labels =c("ACP","Homals","RM", "TRI")),
+                    score = c(score_acp1,score_acp2,score_RM,score_TRI),
+                    Quantile = c(Quantil_acp1,Quantil_acp2,Quantil_RM, Quantil_TRI)
+                    )
+ggplot(data = score, aes(x = Quantile, y = score,fill = metodo)) +
+  geom_boxplot() + theme_minimal()
+
+ggplot(data = score, aes(x = score,color = metodo)) +
+  geom_density(size = 2, adjust = 1) + theme_minimal()
 
 #######################
 # Escogencia de ítems #
@@ -266,4 +337,14 @@ anaitem2 <- anaitem %>%
 
 wrightMap(theta.est, sort(anaitem2$Dffclt), 
           label.items.row = 3)
+c(Quantil_acp1,Quantil_acp2,Quantil_RM, Quantil_TRI)
+
+dat_1 %>% select(anaitem2$names) %>% 
+  mutate(score_acp = Quantil_acp1,
+         score_homals = Quantil_acp2,
+         score_RM = Quantil_RM,
+         score_TRI = Quantil_TRI) %>% 
+  saveRDS(object = ., file = "Data/RHS2021_HH_recortada.rds")
+
+
 
