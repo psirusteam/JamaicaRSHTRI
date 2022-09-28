@@ -96,47 +96,13 @@ resumen <-  map_df(names(escenario),function(by){
 resumen %>% distinct(Pregunta, metodo, R2) %>% 
   group_by( metodo ) %>% summarise(R2 = sum(R2))
 
-resumen1 <-
-  resumen %>% filter(metodo %in% c("score_homals", "score_TRI"), 
-                     Pregunta %in% names(dat_1)[1:5])
-ggplot(resumen1, aes(
-  x = Quantile,
-  y = prop,
-  color = as.factor(Nivel_preg)
-)) +
-  geom_point() +
-  facet_grid(metodo ~ Pregunta)+theme_bw(10)
+map(names(dat_1),function(x){
+  jpeg(filename = paste0("Output/",substr(x,1,20),".jpeg"),  
+       width = 800, height = 600,  )
+  boxplot(dat_2[[x]]~dat_2$score_acp, xlab = x,ylab = "")  
+  dev.off()
+})
 
-resumen1 <-
-  resumen %>% filter(metodo %in% c("score_homals", "score_TRI"), 
-                     Pregunta %in% names(dat_1)[6:10])
-ggplot(resumen1, aes(
-  x = Quantile,
-  y = prop,
-  color = as.factor(Nivel_preg)
-)) +
-  geom_point() +
-  facet_grid(metodo ~ Pregunta) +theme_bw(10)
 
-resumen1 <-
-  resumen %>% filter(metodo %in% c("score_homals", "score_TRI"), 
-                     Pregunta %in% names(dat_1)[11:15])
-ggplot(resumen1, aes(
-  x = Quantile,
-  y = prop,
-  color = as.factor(Nivel_preg)
-)) +
-  geom_point() +
-  facet_grid(metodo ~ Pregunta) +theme_bw(10)
 
-resumen1 <-
-  resumen %>% filter(metodo %in% c("score_homals", "score_TRI"), 
-                     Pregunta %in% names(dat_1)[16:20])
-ggplot(resumen1, aes(
-  x = Quantile,
-  y = prop,
-  color = as.factor(Nivel_preg)
-)) +
-  geom_point() +
-  facet_grid(metodo ~ Pregunta) +theme_bw(10)
-
+  
