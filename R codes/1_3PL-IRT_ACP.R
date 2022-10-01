@@ -1,7 +1,7 @@
 #############################################
 ### Item Analysis - ECLAC/STATIN          ###
 ###                                       ###
-### Reproductive Health Survey 2021       ###                                       ###
+### Reproductive Health Survey 2021       ###
 ### Creation of a welfare index           ###
 ###                                       ###
 ### Part one: every item matters          ###
@@ -93,7 +93,7 @@ fviz_pca_biplot(acp_1)
 
 # Selecting the first component
 dim1 <- as.numeric(scale(acp_1$ind$coord[, 1]))
-# Standardized with mean mu = 5 y sigma = 2
+# My preferred scale: mu = 5 sigma = 2
 score_acp1 <- 5 + 2 * (dim1)
 hist(score_acp1)
 boxplot(score_acp1)
@@ -162,10 +162,6 @@ res_rm_1 <- RM(dat_1)
 pres <- person.parameter(res_rm_1)
 theta.est <- pres$theta.table$`Person Parameter`
 hist(theta.est)
-plot(theta.est)
-beta.est <- pres$betapar
-hist(beta.est)
-plot(beta.est)
 
 welfare.est <- scale(theta.est)
 hist(welfare.est)
@@ -179,6 +175,7 @@ for (i in 1:ncol(dat_1)) {
   plotICC(res_rm_1, item.subset = i, legend = TRUE)
   abline(h = 0.5, lty = 3, col = 2)
   abline(v = 0, lty = 2, col = 3)
+  print(i)
 }
 
 plotjointICC(res_rm_1, cex = .4)
@@ -196,6 +193,7 @@ for (i in 1:ncol(dat_1)) {
   plot(res_3pl_1, items = i, legend = TRUE)
   abline(h = 0.5, lty = 3, col = 2)
   abline(v = 0, lty = 2, col = 3)
+  print(i)
 }
 
 ## Item Information Curves
@@ -203,14 +201,17 @@ plot(res_3pl_1,
      items = c(1:5),
      type = "IIC",
      legend = T)
+
 plot(res_3pl_1,
      items = c(6:10),
      type = "IIC",
      legend = T)
+
 plot(res_3pl_1,
      items = c(11:15),
      type = "IIC",
      legend = T)
+
 plot(res_3pl_1,
      items = c(16:20),
      type = "IIC",
@@ -221,13 +222,14 @@ plot(res_3pl_1,
      type = "IIC",
      items = 0,
      legend = T)
+
 plot(res_3pl_1, type = "IIC", legend = T)
 
 # Generation of the scale
 
 anaitem <- as.data.frame(coef(res_3pl_1))
 rownames(anaitem)
-anaitem[order(anaitem$Dscrmn),]
+anaitem[order(anaitem$Dscrmn), ]
 ## Information at 3.5SD
 anaitem$info <- NULL
 anaitem$names <- NULL
@@ -260,8 +262,6 @@ mean(score_TRI)
 sd(score_TRI)
 hist(score_TRI, breaks = 20)
 summary(score_TRI)
-
-
 
 # Creation of welfare quantiles -------------------------------------------
 
@@ -343,23 +343,28 @@ Quantil_TRI <- cut(
 )
 
 score <- data.frame(
-  metodo = gl(
+  method = gl(
     k = length(Quantil_acp1),
-    n = 4,
-    labels = c("ACP", "Homals", "RM", "TRI")
+    n = 5,
+    labels = c("ACP", "Homals", "CIRT", "RM", "TRI")
   ),
-  score = c(score_acp1, score_homals, score_RM, score_TRI),
-  Quantile = c(Quantil_acp1, 
-               Quantil_homals,
-               Quantil_cirt,
-               Quantil_RM, 
-               Quantil_TRI)
+  score = c(score_acp1, score_homals, score_cirt, score_RM, score_TRI),
+  Quantile = c(
+    Quantil_acp1,
+    Quantil_homals,
+    Quantil_cirt,
+    Quantil_RM,
+    Quantil_TRI
+  )
 )
-ggplot(data = score, aes(x = Quantile, y = score, fill = metodo)) +
+
+score <- score[complete.cases(score), ]
+
+ggplot(data = score, aes(x = Quantile, y = score, fill = method)) +
   geom_boxplot() + theme_minimal()
 
-ggplot(data = score, aes(x = score, color = metodo)) +
-  geom_density(size = 2, adjust = 1) + theme_minimal()
+ggplot(data = score, aes(x = score, color = method)) +
+  geom_density() + theme_minimal()
 
 
 # Final stage: Excluding items --------------------------------------------
@@ -369,19 +374,23 @@ arrange(anaitem, (Dscrmn))
 arrange(anaitem, (info))
 
 anaitem1 <- anaitem %>%
-  filter(info >= 95 & Dscrmn > 2) %>%
+  filter(info >= 80 & Dscrmn > 1) %>%
   arrange(Dffclt)
 
 wrightMap(theta.est, sort(anaitem1$Dffclt),
           label.items.row = 3)
 
 anaitem2 <- anaitem %>%
-  filter(info >= 95 | Dscrmn > 2) %>%
+  filter(info >= 80 | Dscrmn > 1) %>%
   arrange(Dffclt)
 
 wrightMap(theta.est, sort(anaitem2$Dffclt),
           label.items.row = 3)
-c(Quantil_acp1, Quantil_homals, Quantil_cirt, Quantil_RM, Quantil_TRI)
+c(Quantil_acp1,
+  Quantil_homals,
+  Quantil_cirt,
+  Quantil_RM,
+  Quantil_TRI)
 
 dat_1 %>% select(anaitem2$names) %>%
   mutate(
