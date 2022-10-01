@@ -1,13 +1,14 @@
 ############################################# 
-### Análisis de ítems de la ECV 2014      ###
+### Item Analysis - ECLAC/STATIN          ###
 ###                                       ###
-### Creación de una escala de             ###
-### equipamiento para la estratificación  ###
-### del marco de muestreo                 ###
+### Reproductive Health Survey 2021       ###                                       ###
+### Creation of a welfare index           ###
+###                                       ###
+### Part three: assessment of escenarios  ###
 ###                                       ###
 ### ECLAC's Official Mission              ### 
 ### Author: Andrés Gutiérrez              ###
-### Date: 2019                            ###
+### Date: 2022                            ###
 ############################################# 
 
 rm(list = ls())

@@ -1,13 +1,15 @@
 ############################################# 
-### Análisis de ítems de la ECV 2014      ###
+### Item Analysis - ECLAC/STATIN          ###
 ###                                       ###
-### Creación de una escala de             ###
-### equipamiento para la estratificación  ###
-### del marco de muestreo                 ###
+### Reproductive Health Survey 2021       ###                                       ###
+### Creation of a welfare index           ###
+###                                       ###
+### Part two: some items matters          ###
+### more than others                      ###
 ###                                       ###
 ### ECLAC's Official Mission              ### 
 ### Author: Andrés Gutiérrez              ###
-### Date: 2019                            ###
+### Date: 2022                            ###
 ############################################# 
 
 rm(list = ls())
@@ -37,46 +39,22 @@ data <- fread("Data/RHS2021_HH_WEALTH.dat")
 
 
 # Seleccionar columnas de interés  ----------------------------------------
+dat_1 <- readRDS("Data/RHS2021_HH_recortada.rds") 
 
-dat_1 <- data %>%
-  dplyr::select(matches("hh_10"))
-
-# Renombrar columnas  -----------------------------------------------------
-
-names(dat_1) <-
-c(
-"[A] ELECTRIC STOVE",
-"[B] GAS STOVE",
-"[C] REFRIGERATOR",
-"[D] FREEZER (DEEP FREEZE)",
-"[E] MICROWAVE",
-"[F] RADIO",
-"[G] AIR CONDITIONER",
-"[H] ELECTRONIC GAMING EQUIPMENT",
-"[I] WASHING MACHINE",
-"[J] CLOTHES DRYER",
-"[K] ELECTRIC WATER HEATER",
-"[L] SOLAR WATER HEATER",
-"[M] COMPUTER (INCLUDING LAPTOP & TABLET)",
-"[N] TELEVISION",
-"[O] CABLE SERVICE",
-"[P] GENERATOR",
-"[Q] DISHWASHER",
-"[R] INTERNET WITHIN THE HOUSEHOLD",
-"[S] A WORKING MOTORCYCLE/MOTORBIKE",
-"[T] A WORKING MOTOR VEHICLE (CAR, VAN OR TR")
+dat_2 <- dat_1 %>%
+  dplyr::select(!matches("score"))
 
 ###########################################
 ### Análisis de componentes principales ###
 ###########################################
-M <- cor(dat_1)
-dimnames(M)[[1]] <- substr(names(dat_1),1,3)
-dimnames(M)[[2]] <- substr(names(dat_1),1,3)
+M <- cor(dat_2)
+dimnames(M)[[1]] <- substr(names(dat_2),1,3)
+dimnames(M)[[2]] <- substr(names(dat_2),1,3)
 corrplot(M, order = 'FPC', addCoef.col = 'black',
          tl.pos = 'd',
          cl.pos = 'n', col = COL2('PiYG'))
 
-acp_1 <- PCA(dat_1, ncp = 2, graph = FALSE)
+acp_1 <- PCA(dat_2, ncp = 2, graph = FALSE)
 
 acp_1$var$contrib %>% data.frame() %>% arrange(desc( Dim.1))
 
@@ -95,8 +73,10 @@ boxplot(score_acp1)
 ##################################################
 ### Análisis de componentes principales homals ###
 ##################################################
-data_homal <- homals(dat_1, ndim = 2, level = "nominal")
-acp_2 <- PCA(-data_homal$scoremat[,,1], ncp = 2, graph = FALSE)
+data_homal <- homals(dat_2, ndim = 2, level = "nominal")$scoremat[,,1] %>% 
+  as.data.frame()
+data_homal[["[C] REFRIGERATOR"]] = -data_homal[["[C] REFRIGERATOR"]] 
+acp_2 <- PCA(-data_homal, ncp = 2, graph = FALSE)
 
 acp_2$var$contrib %>% data.frame() %>% arrange(desc( Dim.1))
 
@@ -117,18 +97,18 @@ boxplot(score_acp2)
 ######################
 
 #Reliability
-cronbach.alpha(dat_1)  
+cronbach.alpha(dat_2)  
 
 # proporciones de bienestar
 # proporciones de aciertos
-prop <- colMeans(dat_1)
+prop <- colMeans(dat_2)
 sort(prop, decreasing = T)
 # varianza
 var <- prop * (1 - prop)
 sort(var, decreasing = T)
 
 # proporciones estandarizadas
-bienestar <- rowMeans(dat_1)
+bienestar <- rowMeans(dat_2)
 head(bienestar)
 mean(bienestar)
 sd(bienestar)
@@ -150,7 +130,7 @@ boxplot(score)
 ### Modelo de Rasch ###
 #######################
 
-res_rm_1 <- RM(dat_1)
+res_rm_1 <- RM(dat_2)
 
 pres <- person.parameter(res_rm_1)
 theta.est <- pres$theta.table$`Person Parameter`
@@ -168,7 +148,7 @@ hist(dificultad.est)
 score_RM <- 5 + 2 * bienestar.est
 hist(score_RM)
 
-for (i in 1:ncol(dat_1)) {
+for (i in 1:ncol(dat_2)) {
   plotICC(res_rm_1, item.subset = i, legend = TRUE)
   abline(h = 0.5, lty = 3, col = 2)
   abline(v = 0, lty = 2, col = 3)
@@ -185,13 +165,13 @@ plotPImap(res_rm_1, cex.gen = .55, sorted = TRUE)
 # Análisis de ítems #
 #####################
 
-res_3pl_1 <- tpm(dat_1)
+res_3pl_1 <- tpm(dat_2)
 res_3pl_1
 plot(res_3pl_1)
 
 ## Item Characteristic Curves
 
-for (i in 1:ncol(dat_1)) {
+for (i in 1:ncol(dat_2)) {
   plot(res_3pl_1, items = i, legend = TRUE)
   abline(h = 0.5, lty = 3, col = 2)
   abline(v = 0, lty = 2, col = 3)
@@ -200,8 +180,6 @@ for (i in 1:ncol(dat_1)) {
 ## Item Information Curves
 plot(res_3pl_1, items = c(1:5), type = "IIC", legend = T)
 plot(res_3pl_1, items = c(6:10), type = "IIC", legend = T)
-plot(res_3pl_1, items = c(11:15), type = "IIC", legend = T)
-plot(res_3pl_1, items = c(16:20), type = "IIC", legend = T)
 
 ## Test Information Function
 plot(res_3pl_1, type = "IIC", items = 0, legend = T)
@@ -217,7 +195,7 @@ anaitem[order(anaitem$Dscrmn),  ]
 ## Information at 3.5SD
 anaitem$info <- NULL
 anaitem$names <- NULL
-for (i in 1:ncol(dat_1)) {
+for (i in 1:ncol(dat_2)) {
   anaitem$names[i] <- rownames(anaitem)[i] 
   anaitem$info[i] <- round(100 * unlist(information(res_3pl_1, c(-3.5,3.5), items = i))$PropRange)
 }
@@ -225,7 +203,7 @@ for (i in 1:ncol(dat_1)) {
 arrange(anaitem, Dscrmn, info)
 
 ## Standardizing the scores and creating the index
-pres <- factor.scores(res_3pl_1, dat_1)
+pres <- factor.scores(res_3pl_1, dat_2)
 
 theta.est <- pres$score.dat$z1
 hist(theta.est)
@@ -260,7 +238,7 @@ summary(score_TRI)
 
 ##########################################
 ## Diseño muestral
-diseno <- dat_1 %>% 
+diseno <- dat_2 %>% 
   mutate(feh = data$hh_weight,
          score_acp = score_acp1,
          score_homals = score_acp2,
@@ -315,7 +293,7 @@ ggplot(data = score, aes(x = Quantile, y = score,fill = metodo)) +
   geom_boxplot() + theme_minimal()
 
 ggplot(data = score, aes(x = score,color = metodo)) +
-  geom_density(size = 2, adjust = 1) + theme_minimal()
+  geom_density(size = 2, adjust = 2) + theme_minimal()
 
 #######################
 # Escogencia de ítems #
@@ -337,14 +315,13 @@ anaitem2 <- anaitem %>%
 
 wrightMap(theta.est, sort(anaitem2$Dffclt), 
           label.items.row = 3)
-c(Quantil_acp1,Quantil_acp2,Quantil_RM, Quantil_TRI)
 
-dat_1 %>% select(anaitem2$names) %>% 
-  mutate(score_acp = Quantil_acp1,
-         score_homals = Quantil_acp2,
-         score_RM = Quantil_RM,
-         score_TRI = Quantil_TRI) %>% 
-  saveRDS(object = ., file = "Data/RHS2021_HH_recortada.rds")
+dat_1 %>% select(matches("score")) %>% 
+  mutate(score_acp_R = Quantil_acp1,
+         score_homals_R = Quantil_acp2,
+         score_RM_R = Quantil_RM,
+         score_TRI_R = Quantil_TRI) %>%  
+  saveRDS(object = ., file = "Data/Escenario.rds")
 
 
 
