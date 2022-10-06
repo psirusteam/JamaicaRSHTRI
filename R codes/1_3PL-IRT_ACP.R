@@ -163,10 +163,11 @@ pres <- person.parameter(res_rm_1)
 theta.est <- pres$theta.table$`Person Parameter`
 hist(theta.est)
 
+beta.est <- pres$betapar
+hist(beta.est)
+
 welfare.est <- scale(theta.est)
 hist(welfare.est)
-difficulty.est <- scale(beta.est)
-hist(difficulty.est)
 
 score_RM <- 5 + 2 * welfare.est
 hist(score_RM)
@@ -246,7 +247,6 @@ pres <- factor.scores(res_3pl_1, dat_1)
 
 theta.est <- pres$score.dat$z1
 hist(theta.est)
-plot(theta.est)
 
 wrightMap(theta.est, sort(beta.est), label.items.row = 3)
 
@@ -383,14 +383,10 @@ wrightMap(theta.est, sort(anaitem1$Dffclt),
 anaitem2 <- anaitem %>%
   filter(info >= 80 | Dscrmn > 1) %>%
   arrange(Dffclt)
+anaitem2
 
 wrightMap(theta.est, sort(anaitem2$Dffclt),
           label.items.row = 3)
-c(Quantil_acp1,
-  Quantil_homals,
-  Quantil_cirt,
-  Quantil_RM,
-  Quantil_TRI)
 
 dat_1 %>% select(anaitem2$names) %>%
   mutate(
@@ -400,4 +396,4 @@ dat_1 %>% select(anaitem2$names) %>%
     score_RM = Quantil_RM,
     score_TRI = Quantil_TRI
   ) %>%
-  saveRDS(object = ., file = "Data/RHS2021_HH_recortada.rds")
+  saveRDS(object = ., file = "Data/RHS2021_HH_trimmed.rds")
